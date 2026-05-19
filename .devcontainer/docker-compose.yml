@@ -1,8 +1,8 @@
 services:
   app:
     build:
-      context: ..
-      dockerfile: .devcontainer/Dockerfile
+      context: .
+      dockerfile: Dockerfile
     volumes:
       - ..:/workspace:cached
       - node_modules:/workspace/node_modules
