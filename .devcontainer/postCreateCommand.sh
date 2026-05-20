@@ -5,7 +5,7 @@ echo "Installing dependencies..."
 npm install
 
 echo "Generating Prisma client..."
-npx prisma generate
+npm exec prisma -- generate
 
 echo "Waiting for database..."
 until pg_isready -h db -U postgres 2>/dev/null; do
@@ -13,7 +13,7 @@ until pg_isready -h db -U postgres 2>/dev/null; do
 done
 
 echo "Pushing schema to database..."
-npx prisma db push
+npm exec prisma -- db push
 
 echo "Seeding admin user..."
 npx tsx prisma/seed.ts
