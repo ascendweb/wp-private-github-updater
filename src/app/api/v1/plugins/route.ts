@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { parseGitHubRepoUrl } from "@/lib/github";
 
 export async function GET() {
   const session = await auth();
@@ -23,18 +24,32 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { slug, name, description, githubOwner, githubRepo, testedWp, requiresPhp } = body;
+  const { slug, name, description, githubUrl } = body;
 
-  if (!slug || !name || !githubOwner || !githubRepo) {
+  if (!slug || !name || !githubUrl) {
     return NextResponse.json(
-      { error: "Missing required fields: slug, name, githubOwner, githubRepo" },
+      { error: "Missing required fields: slug, name, githubUrl" },
+      { status: 400 }
+    );
+  }
+
+  const parsedRepo = parseGitHubRepoUrl(String(githubUrl));
+  if (!parsedRepo) {
+    return NextResponse.json(
+      { error: "Invalid GitHub repository URL. Expected format: https://github.com/owner/repo" },
       { status: 400 }
     );
   }
 
   try {
     const plugin = await prisma.plugin.create({
-      data: { slug, name, description, githubOwner, githubRepo, testedWp, requiresPhp },
+      data: {
+        slug,
+        name,
+        description,
+        githubOwner: parsedRepo.owner,
+        githubRepo: parsedRepo.repo,
+      },
     });
     return NextResponse.json(plugin, { status: 201 });
   } catch {

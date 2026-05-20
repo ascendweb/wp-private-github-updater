@@ -42,8 +42,6 @@ export async function GET(req: NextRequest) {
     slug: plugin.slug,
     new_version: release.version,
     package: `${serverUrl}/api/v1/download/${plugin.slug}/${release.version}?license_key=${licenseKey}&site_url=${encodeURIComponent(siteUrl)}`,
-    tested: plugin.testedWp || "6.7",
-    requires_php: plugin.requiresPhp || "8.0",
     sections: {
       changelog: release.changelog,
     },

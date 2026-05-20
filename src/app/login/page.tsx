@@ -12,6 +12,8 @@ export default function LoginPage() {
   const router = useRouter();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [githubLoading, setGithubLoading] = useState(false);
+  const githubAuthEnabled = process.env.NEXT_PUBLIC_GITHUB_AUTH_ENABLED === "true";
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -32,6 +34,11 @@ export default function LoginPage() {
       router.push("/");
       router.refresh();
     }
+  }
+
+  async function handleGitHubSignIn() {
+    setGithubLoading(true);
+    await signIn("github", { callbackUrl: "/" });
   }
 
   return (
@@ -59,6 +66,17 @@ export default function LoginPage() {
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Signing in..." : "Sign in"}
             </Button>
+            {githubAuthEnabled && (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                disabled={githubLoading}
+                onClick={handleGitHubSignIn}
+              >
+                {githubLoading ? "Redirecting..." : "Continue with GitHub"}
+              </Button>
+            )}
           </form>
         </CardContent>
       </Card>

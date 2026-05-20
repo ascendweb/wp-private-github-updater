@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { releaseCache } from "@/lib/cache";
+import { parseGitHubRepoUrl } from "@/lib/github";
 
 export async function GET(
   _req: NextRequest,
@@ -36,11 +37,35 @@ export async function PATCH(
 
   const { id } = await params;
   const body = await req.json();
+  const updateData: {
+    name?: string;
+    description?: string | null;
+    githubOwner?: string;
+    githubRepo?: string;
+  } = {};
+
+  if (typeof body.name === "string") {
+    updateData.name = body.name;
+  }
+  if (body.description === null || typeof body.description === "string") {
+    updateData.description = body.description;
+  }
+  if (body.githubUrl !== undefined) {
+    const parsedRepo = parseGitHubRepoUrl(String(body.githubUrl));
+    if (!parsedRepo) {
+      return NextResponse.json(
+        { error: "Invalid GitHub repository URL. Expected format: https://github.com/owner/repo" },
+        { status: 400 }
+      );
+    }
+    updateData.githubOwner = parsedRepo.owner;
+    updateData.githubRepo = parsedRepo.repo;
+  }
 
   try {
     const plugin = await prisma.plugin.update({
       where: { id },
-      data: body,
+      data: updateData,
     });
     releaseCache.invalidate(plugin.slug);
     return NextResponse.json(plugin);

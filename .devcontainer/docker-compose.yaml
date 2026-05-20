@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 services:
   app:
@@ -12,10 +12,17 @@ services:
       DATABASE_URL: postgresql://postgres:postgres@db:5432/wp_updater?schema=public
       NEXTAUTH_URL: http://localhost:3000
       NEXTAUTH_SECRET: dev-secret-change-in-production
+      NEXT_PUBLIC_GITHUB_AUTH_ENABLED: "false"
+      GITHUB_AUTH_CLIENT_ID: ""
+      GITHUB_AUTH_CLIENT_SECRET: ""
+      GITHUB_AUTH_ALLOWED_ORG: ""
+      GITHUB_APP_ID: ""
+      GITHUB_APP_PRIVATE_KEY: ""
+      GITHUB_APP_INSTALLATION_ID: ""
       ADMIN_EMAIL: admin@example.com
       ADMIN_PASSWORD: changeme
     ports:
-      - '3000:3000'
+      - "3000:3000"
 
   db:
     image: postgres:16-alpine
@@ -26,7 +33,7 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     ports:
-      - '5432:5432'
+      - "5432:5432"
 
 volumes:
   pgdata:

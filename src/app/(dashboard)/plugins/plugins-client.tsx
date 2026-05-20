@@ -47,8 +47,6 @@ interface Plugin {
   description: string | null;
   githubOwner: string;
   githubRepo: string;
-  testedWp: string | null;
-  requiresPhp: string | null;
   createdAt: Date;
   _count: { licenses: number };
 }
@@ -67,10 +65,7 @@ export function PluginsClient({ initialPlugins }: { initialPlugins: Plugin[] }) 
       slug: fd.get("slug"),
       name: fd.get("name"),
       description: fd.get("description") || null,
-      githubOwner: fd.get("githubOwner"),
-      githubRepo: fd.get("githubRepo"),
-      testedWp: fd.get("testedWp") || "6.7",
-      requiresPhp: fd.get("requiresPhp") || "8.0",
+      githubUrl: fd.get("githubUrl"),
     };
 
     const url = editPlugin
@@ -165,47 +160,19 @@ export function PluginsClient({ initialPlugins }: { initialPlugins: Plugin[] }) 
                   defaultValue={editPlugin?.description || ""}
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="githubOwner">GitHub Owner</Label>
-                  <Input
-                    id="githubOwner"
-                    name="githubOwner"
-                    placeholder="octocat"
-                    defaultValue={editPlugin?.githubOwner}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="githubRepo">GitHub Repo</Label>
-                  <Input
-                    id="githubRepo"
-                    name="githubRepo"
-                    placeholder="my-wp-plugin"
-                    defaultValue={editPlugin?.githubRepo}
-                    required
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="testedWp">Tested WP Version</Label>
-                  <Input
-                    id="testedWp"
-                    name="testedWp"
-                    placeholder="6.7"
-                    defaultValue={editPlugin?.testedWp || "6.7"}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="requiresPhp">Requires PHP</Label>
-                  <Input
-                    id="requiresPhp"
-                    name="requiresPhp"
-                    placeholder="8.0"
-                    defaultValue={editPlugin?.requiresPhp || "8.0"}
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="githubUrl">GitHub Repository URL</Label>
+                <Input
+                  id="githubUrl"
+                  name="githubUrl"
+                  placeholder="https://github.com/octocat/my-wp-plugin"
+                  defaultValue={
+                    editPlugin
+                      ? `https://github.com/${editPlugin.githubOwner}/${editPlugin.githubRepo}`
+                      : ""
+                  }
+                  required
+                />
               </div>
               <DialogFooter>
                 <Button type="submit" disabled={loading}>

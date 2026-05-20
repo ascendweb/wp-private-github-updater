@@ -3,6 +3,32 @@ import { releaseCache, type ReleaseInfo } from "./cache";
 
 let appInstance: App | null = null;
 
+export function parseGitHubRepoUrl(urlInput: string): { owner: string; repo: string } | null {
+  const input = urlInput.trim();
+  if (!input) return null;
+
+  let normalized = input;
+  if (normalized.startsWith("git@github.com:")) {
+    normalized = `https://github.com/${normalized.replace("git@github.com:", "")}`;
+  }
+
+  try {
+    const url = new URL(normalized);
+    if (url.hostname !== "github.com") return null;
+
+    const parts = url.pathname
+      .replace(/^\/+|\/+$/g, "")
+      .replace(/\.git$/, "")
+      .split("/");
+
+    if (parts.length < 2 || !parts[0] || !parts[1]) return null;
+
+    return { owner: parts[0], repo: parts[1] };
+  } catch {
+    return null;
+  }
+}
+
 function getApp(): App {
   if (appInstance) return appInstance;
 
@@ -29,11 +55,7 @@ async function getInstallationOctokit() {
   return getApp().getInstallationOctokit(Number(installationId));
 }
 
-export async function getLatestRelease(
-  owner: string,
-  repo: string,
-  pluginSlug: string
-): Promise<ReleaseInfo | null> {
+export async function getLatestRelease(owner: string, repo: string, pluginSlug: string): Promise<ReleaseInfo | null> {
   const cached = releaseCache.get(pluginSlug);
   if (cached) return cached;
 
@@ -58,11 +80,7 @@ export async function getLatestRelease(
   }
 }
 
-export async function streamReleaseZip(
-  owner: string,
-  repo: string,
-  tag: string
-): Promise<{ stream: ReadableStream; contentType: string } | null> {
+export async function streamReleaseZip(owner: string, repo: string, tag: string): Promise<{ stream: ReadableStream; contentType: string } | null> {
   try {
     const octokit = await getInstallationOctokit();
 
