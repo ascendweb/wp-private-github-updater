@@ -6,7 +6,7 @@ import { prisma } from "./db";
 
 const githubClientId = process.env.GITHUB_AUTH_CLIENT_ID;
 const githubClientSecret = process.env.GITHUB_AUTH_CLIENT_SECRET;
-const githubAllowedOrg = process.env.GITHUB_AUTH_ALLOWED_ORG;
+const githubAllowedOrg = process.env.GITHUB_AUTH_ALLOWED_ORG?.trim().replace(/^@/, "");
 const githubProvider =
   githubClientId && githubClientSecret && githubAllowedOrg
     ? [
@@ -57,7 +57,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (!accessToken) return false;
 
       try {
-        const response = await fetch(
+        const membershipResponse = await fetch(
           `https://api.github.com/user/memberships/orgs/${encodeURIComponent(githubAllowedOrg)}`,
           {
             headers: {
@@ -68,9 +68,26 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           }
         );
 
-        if (!response.ok) return false;
-        const membership = (await response.json()) as { state?: string };
-        return membership.state === "active";
+        if (membershipResponse.ok) {
+          const membership = (await membershipResponse.json()) as { state?: string };
+          return membership.state === "active";
+        }
+
+        // Fallback for token/API variants: list orgs and match by login.
+        const orgsResponse = await fetch("https://api.github.com/user/orgs?per_page=100", {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            Accept: "application/vnd.github+json",
+            "User-Agent": "wp-private-updater-auth",
+          },
+        });
+
+        if (!orgsResponse.ok) return false;
+
+        const orgs = (await orgsResponse.json()) as Array<{ login?: string }>;
+        return orgs.some(
+          (org) => org.login?.toLowerCase() === githubAllowedOrg.toLowerCase()
+        );
       } catch {
         return false;
       }
