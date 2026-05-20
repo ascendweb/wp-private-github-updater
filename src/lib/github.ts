@@ -60,6 +60,38 @@ async function getInstallationOctokit() {
   return getApp().getInstallationOctokit(Number(installationId));
 }
 
+async function getInstallationToken(octokit: Awaited<ReturnType<typeof getInstallationOctokit>>) {
+  const authResult = await octokit.auth({ type: "installation" });
+  if (
+    authResult &&
+    typeof authResult === "object" &&
+    "token" in authResult &&
+    typeof authResult.token === "string"
+  ) {
+    return authResult.token;
+  }
+  return null;
+}
+
+function buildAssetNameCandidates(slug: string, version: string, pattern?: string | null): string[] {
+  const normalizedVersion = version.replace(/^v/i, "");
+  const chosenPattern = pattern?.trim() || "{slug}-v{version}.zip";
+  const candidates = new Set<string>();
+
+  candidates.add(
+    chosenPattern
+      .replaceAll("{slug}", slug)
+      .replaceAll("{version}", normalizedVersion)
+  );
+  candidates.add(
+    chosenPattern
+      .replaceAll("{slug}", slug)
+      .replaceAll("{version}", version)
+  );
+
+  return [...candidates].filter(Boolean);
+}
+
 export async function getLatestRelease(owner: string, repo: string, pluginSlug: string): Promise<ReleaseInfo | null> {
   const cached = releaseCache.get(pluginSlug);
   if (cached) return cached;
@@ -85,41 +117,94 @@ export async function getLatestRelease(owner: string, repo: string, pluginSlug: 
   }
 }
 
-export async function streamReleaseZip(owner: string, repo: string, tag: string): Promise<{ stream: ReadableStream; contentType: string } | null> {
-  try {
-    const octokit = await getInstallationOctokit();
+export async function streamReleaseZip(
+  owner: string,
+  repo: string,
+  slug: string,
+  tag: string,
+  releaseAssetPattern?: string | null
+): Promise<{ stream: ReadableStream; contentType: string } | null> {
+  const octokit = await getInstallationOctokit();
+  const installationToken = await getInstallationToken(octokit);
+  const refs = Array.from(new Set([tag, tag.replace(/^v/i, ""), `v${tag.replace(/^v/i, "")}`]));
+  const assetCandidates = buildAssetNameCandidates(slug, tag, releaseAssetPattern);
 
-    const { url } = await octokit.rest.repos.downloadZipballArchive({
+  async function fetchReleaseAssetForRef(ref: string) {
+    const { data: release } = await octokit.rest.repos.getReleaseByTag({
       owner,
       repo,
-      ref: `v${tag}`,
-      request: { redirect: "manual" },
+      tag: ref,
     });
 
-    const response = await fetch(url);
+    const asset = release.assets.find((item) => assetCandidates.includes(item.name));
+    if (!asset) return null;
+
+    const headers: Record<string, string> = {
+      Accept: "application/octet-stream",
+      "User-Agent": "wp-private-updater",
+    };
+    if (installationToken) {
+      headers.Authorization = `Bearer ${installationToken}`;
+    }
+
+    const response = await fetch(asset.url, {
+      headers,
+      redirect: "follow",
+    });
+
     if (!response.ok || !response.body) return null;
 
     return {
       stream: response.body,
       contentType: response.headers.get("content-type") || "application/zip",
     };
+  }
+
+  async function fetchZipForRef(ref: string) {
+    const { url } = await octokit.rest.repos.downloadZipballArchive({
+      owner,
+      repo,
+      ref,
+      request: { redirect: "manual" },
+    });
+
+    const authHeaders = installationToken
+      ? {
+          Authorization: `Bearer ${installationToken}`,
+          "User-Agent": "wp-private-updater",
+        }
+      : undefined;
+
+    // Try authenticated fetch first for private repos, then unauthenticated fallback.
+    let response = await fetch(url, {
+      headers: authHeaders,
+      redirect: "follow",
+    });
+    if ((!response.ok || !response.body) && authHeaders) {
+      response = await fetch(url, { redirect: "follow" });
+    }
+
+    if (!response.ok || !response.body) return null;
+    return {
+      stream: response.body,
+      contentType: response.headers.get("content-type") || "application/zip",
+    };
+  }
+
+  for (const ref of refs) {
+    try {
+      const assetResult = await fetchReleaseAssetForRef(ref);
+      if (assetResult) return assetResult;
+    } catch {
+      // Keep trying alternate refs.
+    }
+  }
+
+  try {
+    return await fetchZipForRef(`v${tag.replace(/^v/i, "")}`);
   } catch {
     try {
-      const octokit = await getInstallationOctokit();
-      const { url } = await octokit.rest.repos.downloadZipballArchive({
-        owner,
-        repo,
-        ref: tag,
-        request: { redirect: "manual" },
-      });
-
-      const response = await fetch(url);
-      if (!response.ok || !response.body) return null;
-
-      return {
-        stream: response.body,
-        contentType: response.headers.get("content-type") || "application/zip",
-      };
+      return await fetchZipForRef(tag.replace(/^v/i, ""));
     } catch {
       return null;
     }

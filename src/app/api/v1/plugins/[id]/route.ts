@@ -42,6 +42,7 @@ export async function PATCH(
     description?: string | null;
     githubOwner?: string;
     githubRepo?: string;
+    releaseAssetPattern?: string;
   } = {};
 
   if (typeof body.name === "string") {
@@ -60,6 +61,11 @@ export async function PATCH(
     }
     updateData.githubOwner = parsedRepo.owner;
     updateData.githubRepo = parsedRepo.repo;
+  }
+  if (typeof body.releaseAssetPattern === "string") {
+    const trimmedPattern = body.releaseAssetPattern.trim();
+    updateData.releaseAssetPattern =
+      trimmedPattern.length > 0 ? trimmedPattern : "{slug}-v{version}.zip";
   }
 
   try {

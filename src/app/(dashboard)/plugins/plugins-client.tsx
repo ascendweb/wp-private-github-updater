@@ -47,6 +47,7 @@ interface Plugin {
   description: string | null;
   githubOwner: string;
   githubRepo: string;
+  releaseAssetPattern: string;
   createdAt: Date;
   _count: { licenses: number };
 }
@@ -100,6 +101,8 @@ export function PluginsClient({ initialPlugins }: { initialPlugins: Plugin[] }) 
       name: fd.get("name"),
       description: fd.get("description") || null,
       githubUrl: fd.get("githubUrl"),
+      releaseAssetPattern:
+        fd.get("releaseAssetPattern") || "{slug}-v{version}.zip",
     };
 
     const url = editPlugin
@@ -205,6 +208,16 @@ export function PluginsClient({ initialPlugins }: { initialPlugins: Plugin[] }) 
                       ? `https://github.com/${editPlugin.githubOwner}/${editPlugin.githubRepo}`
                       : ""
                   }
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="releaseAssetPattern">Release Asset Pattern</Label>
+                <Input
+                  id="releaseAssetPattern"
+                  name="releaseAssetPattern"
+                  placeholder="{slug}-v{version}.zip"
+                  defaultValue={editPlugin?.releaseAssetPattern || "{slug}-v{version}.zip"}
                   required
                 />
               </div>

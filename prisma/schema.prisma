@@ -21,6 +21,7 @@ model Plugin {
   description String?
   githubOwner String
   githubRepo  String
+  releaseAssetPattern String @default("{slug}-v{version}.zip")
   testedWp    String?   @default("6.7")
   requiresPhp String?  @default("8.0")
   createdAt   DateTime  @default(now())

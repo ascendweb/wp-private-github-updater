@@ -25,7 +25,13 @@ export async function GET(
     return NextResponse.json({ error: "Plugin not found" }, { status: 404 });
   }
 
-  const result = await streamReleaseZip(plugin.githubOwner, plugin.githubRepo, version);
+  const result = await streamReleaseZip(
+    plugin.githubOwner,
+    plugin.githubRepo,
+    plugin.slug,
+    version,
+    plugin.releaseAssetPattern
+  );
   if (!result) {
     return NextResponse.json({ error: "Release zip not found" }, { status: 404 });
   }

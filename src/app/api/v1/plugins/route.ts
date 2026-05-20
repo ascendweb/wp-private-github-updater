@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { slug, name, description, githubUrl } = body;
+  const { slug, name, description, githubUrl, releaseAssetPattern } = body;
 
   if (!slug || !name || !githubUrl) {
     return NextResponse.json(
@@ -49,7 +49,11 @@ export async function POST(req: NextRequest) {
         description,
         githubOwner: parsedRepo.owner,
         githubRepo: parsedRepo.repo,
-      },
+        releaseAssetPattern:
+          typeof releaseAssetPattern === "string" && releaseAssetPattern.trim().length > 0
+            ? releaseAssetPattern.trim()
+            : "{slug}-v{version}.zip",
+      } as never,
     });
     return NextResponse.json(plugin, { status: 201 });
   } catch {
