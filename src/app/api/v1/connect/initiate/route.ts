@@ -1,15 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { SignJWT } from "jose";
 
 const secret = new TextEncoder().encode(process.env.NEXTAUTH_SECRET || "secret");
 
+// Public endpoint — no auth required.
+// Security gate is the /connect/approve step where the admin must be logged in.
 export async function POST(req: NextRequest) {
-  const session = await auth();
-  if (!session?.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   const body = await req.json();
   const { site_url, callback_url, plugin_slug } = body;
 
@@ -24,7 +20,6 @@ export async function POST(req: NextRequest) {
     site_url,
     callback_url,
     plugin_slug: plugin_slug || null,
-    user_id: session.user.id,
   })
     .setProtectedHeader({ alg: "HS256" })
     .setExpirationTime("5m")

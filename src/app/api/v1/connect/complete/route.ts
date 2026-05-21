@@ -26,7 +26,6 @@ export async function POST(req: NextRequest) {
       site_url: string;
       callback_url: string;
       plugin_slug: string | null;
-      user_id: string;
     };
   } catch {
     return NextResponse.json({ error: "Invalid or expired token" }, { status: 400 });
